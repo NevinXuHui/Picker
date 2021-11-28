@@ -1,7 +1,9 @@
 package com.hzc.picker;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
@@ -17,14 +19,26 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.hzc.widget.picker.file.FilePicker;
 import com.hzc.widget.picker.file.FilePickerUiParams;
+import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.PageSize;
+import com.itextpdf.text.pdf.PdfAction;
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfDestination;
+import com.itextpdf.text.pdf.PdfOutline;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -86,20 +100,52 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         tvResult = findViewById(R.id.tv_result);
-        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                FilePicker.build(MainActivity.this, 1)
-//                        .setOpenFile(new File("sdcard/123/"))
-                        .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
-//                        .setMultiPick(new FilePicker.OnMultiPickListener() {
+//        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                FilePicker.build(MainActivity.this, 1)
+////                        .setOpenFile(new File("sdcard/123/"))
+//                        .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
+////                        .setMultiPick(new FilePicker.OnMultiPickListener() {
+////                            @Override
+////                            public void pick(@NonNull List<File> pathList) {
+////                                StringBuilder path = new StringBuilder("多选：\n");
+////                                for (int i = 0; i < pathList.size(); i++) {
+////                                    path.append(pathList.get(i).getAbsolutePath()).append("\n\n");
+////                                }
+////                                tvResult.setText(path.toString());
+////                            }
+////
+////                            @Override
+////                            public void cancel() {
+////                                tvResult.setText("取消选择了");
+////                            }
+////                        })
+//                        .setSinglePick(new FilePicker.OnSinglePickListener() {
+//                            @RequiresApi(api = Build.VERSION_CODES.N)
 //                            @Override
-//                            public void pick(@NonNull List<File> pathList) {
-//                                StringBuilder path = new StringBuilder("多选：\n");
-//                                for (int i = 0; i < pathList.size(); i++) {
-//                                    path.append(pathList.get(i).getAbsolutePath()).append("\n\n");
+//                            public void pick(@NonNull File path) throws IOException, DocumentException {
+//                                StringBuilder filestring = new StringBuilder("多选：\n");
+//
+//                                mList = getAllDataFileName(path.getAbsolutePath());
+//                               // Collections.sort(fileList,new FileComparator());
+//                               // fileList.sort(Comparator.naturalOrder());
+//
+//                                for (int i = 0; i < mList.size(); i++) {
+//                                    filestring.append(mList.get(i)).append("\n\n");
 //                                }
-//                                tvResult.setText(path.toString());
+//                                tvResult.setText(filestring.toString());
+//
+//                                toPDF(path);
+////
+////                                try {
+////                                    zcc.createPdf(sourceTextPath, sourceDocPath, desFilename,10);
+////                                    //zcc.getPdf(7, 10, sourceDocPath, desFilename);
+////                                } catch (DocumentException e) {
+////                                    e.printStackTrace();
+////                                } catch (IOException e) {
+////                                    e.printStackTrace();
+////                                }
 //                            }
 //
 //                            @Override
@@ -107,47 +153,35 @@ public class MainActivity extends AppCompatActivity {
 //                                tvResult.setText("取消选择了");
 //                            }
 //                        })
-                        .setSinglePick(new FilePicker.OnSinglePickListener() {
-                            @RequiresApi(api = Build.VERSION_CODES.N)
-                            @Override
-                            public void pick(@NonNull File path) {
-                                StringBuilder filestring = new StringBuilder("多选：\n");
-                                mList = getAllDataFileName(path.getAbsolutePath());
-                               // Collections.sort(fileList,new FileComparator());
-                               // fileList.sort(Comparator.naturalOrder());
-                                for (int i = 0; i < mList.size(); i++) {
-                                    filestring.append(mList.get(i)).append("\n\n");
-                                }
-                                tvResult.setText(filestring.toString());
-                                toPDF(path);
-
-                                GenerateBookmarkUtil zcc = new GenerateBookmarkUtil();
-                                String sourceTextPath = path+"/目录.txt";//生成的目录文本路径
-                               // String sourceDocPath = toPDF();; //电子书路径
-                                String desFilename = path+"/1111111.pdf"; // 生成的带有目录的文件的路径（问价是复制，不是覆盖）
-                                Log.d(TAG, "sourceTextPath:"+sourceTextPath);
-                               // Log.d(TAG, "sourceDocPath:"+sourceDocPath);
-                                Log.d(TAG, "desFilename:"+desFilename);
-//
-//                                try {
-//                                    zcc.createPdf(sourceTextPath, sourceDocPath, desFilename,10);
-//                                    //zcc.getPdf(7, 10, sourceDocPath, desFilename);
-//                                } catch (DocumentException e) {
-//                                    e.printStackTrace();
-//                                } catch (IOException e) {
-//                                    e.printStackTrace();
-//                                }
-                            }
-
-                            @Override
-                            public void cancel() {
-                                tvResult.setText("取消选择了");
-                            }
-                        })
-                        .open();
-            }
-        });
+//                        .open();
+//            }
+//        });
         initProgress();
+        checkNeedPermissions();
+
+        FilePicker.build(MainActivity.this, 1)
+                .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
+                .setSinglePick(new FilePicker.OnSinglePickListener() {
+                                   @RequiresApi(api = Build.VERSION_CODES.N)
+                                   @Override
+                                   public void pick(@NonNull File path) throws IOException, DocumentException {
+                                       StringBuilder filestring = new StringBuilder("多选：\n");
+                                       mList = getAllDataFileName(path.getAbsolutePath());
+
+                                       for (int i = 0; i < mList.size(); i++) {
+                                           filestring.append(mList.get(i)).append("\n\n");
+                                       }
+                                       tvResult.setText(filestring.toString());
+
+                                       toPDF(path);
+                                   }
+                                    @Override
+                                    public void cancel() {
+                        tvResult.setText("取消选择了");
+                    }
+                                   })
+                                    .open();;
+
     }
 
     //                        .setMultiPick(new FilePicker.OnMultiPickListener() {
@@ -226,15 +260,14 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "toPDF: PDFpath.getName()"+PDFpath.getName());
         File file = new File(PdfUtils.ADDRESS);
         if (!file.exists())
-            Log.d(TAG, "toPDF: debug1");
-        file.mkdirs();
+            file.mkdirs();
         Log.d(TAG, "toPDF: debug2");
-        long time = System.currentTimeMillis();
-        Date date = new Date(time);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
+//        long time = System.currentTimeMillis();
+//        Date date = new Date(time);
+//        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
 //        final String pdf_address = PdfUtils.ADDRESS + File.separator + "PDF_"
 //                + sdf.format(date) + ".pdf";
-        final String pdf_address =PDFpath+"/"+PDFpath.getName()+".pdf";
+        final String pdf_address =PDFpath.getPath()+".pdf";
 
         Log.d(TAG, "toPDF: debug3");
         handler.sendEmptyMessage(PDF_SAVE_START);
@@ -263,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "请选选择正确的书籍图片目录", Toast.LENGTH_SHORT).show();
                     }
 
+
                     /* pdfItextUtil = new PdfItextUtil(pdf_address)
                             .addTitleToPdf("哈哈哈哈哈哈")
                             .addTextToPdf("小时一宗大都但是你下u狗的两个垃圾啊的佛教是浪费家里睡大觉分类数据分类将军澳隧道连接法兰圣诞节佛山警方拉数据")
@@ -270,7 +304,11 @@ public class MainActivity extends AppCompatActivity {
                             .addTextToPdf("真滴都是无语打来电话了发几份简历垃圾死了就大了就")
                             .addImageToPdfCenterH(Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "MyPdf" + File.separator + "bb.jpg",  PageSize.A4.getWidth()-20,PageSize.A4.getWidth()/bitmap2.getWidth()*bitmap2.getHeight())
                             .addTextToPdf("笑死宝宝补偿钱");*/
+
+                    pdfItextUtil.storeOutline(PDFpath.getPath());
+
                     pdfItextUtil.close();
+
                     handler.sendEmptyMessage(PDF_SAVE_RESULT);
 
                 } catch (Exception e) {
@@ -284,6 +322,23 @@ public class MainActivity extends AppCompatActivity {
         }).start();
 
         return pdf_address;
+    }
+
+    private void checkNeedPermissions() {
+        //6.0以上需要动态申请权限
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            //多个权限一起申请
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+            }, 1);
+        }
     }
 
 }

@@ -13,15 +13,27 @@ import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfAction;
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfDestination;
+import com.itextpdf.text.pdf.PdfOutline;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.codec.PngImage;
 
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.ClosedFileSystemException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class PdfItextUtil {
     private Document document;
+    private PdfWriter writer;
     private static final String TAG = "PdfItextUtil";
 
     // savePath:保存pdf的路径
@@ -36,11 +48,63 @@ public class PdfItextUtil {
         //获取PDF书写器
         FileOutputStream fileOutputStream = new FileOutputStream(savePath);
         Log.d(TAG, "PdfItextUtil: debug2.5");
-        PdfWriter.getInstance(document, fileOutputStream);
+        writer =PdfWriter.getInstance(document, fileOutputStream);
         Log.d(TAG, "PdfItextUtil: debug3");
+
         //打开文档
         document.open();
         Log.d(TAG, "PdfItextUtil: debug4");
+
+    }
+
+    public void storeOutline(@NonNull String savePath) throws Exception{
+
+        PdfContentByte cb = writer.getDirectContent();
+        PdfOutline root = cb.getRootOutline();
+        PdfOutline sectionOutline1 = null;
+        PdfOutline sectionOutline2 = null;
+        PdfAction action;//标识书签点击后的跳转动作，通过它设置跳转的页码
+        Log.d(TAG, "onCreate: PdfOutline savePath"+savePath);
+
+        String sTxtPath = savePath+"/目录.txt";
+        String str;
+        int flag = 0;
+        BufferedReader bufRead = new BufferedReader(new FileReader(sTxtPath));
+        List<Map<String, Object>> outlines = new ArrayList<>();//存放解析的数据
+        while ((str = bufRead.readLine()) != null) {
+            String[] ss = null;
+            ss = str.split(",");
+            if(flag == 0){
+
+                if(ss[0]==""){
+                    flag = 1;
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
+                }else{
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
+                }
+
+            }
+            else if(flag == 1){
+
+                if(ss[0]==""){
+                    sectionOutline2 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
+                }else{
+                    sectionOutline2 = new PdfOutline(sectionOutline1, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
+                }
+            }
+
+
+        }
+
+//        PdfOutline oline1 = new PdfOutline(root,
+//                PdfAction.gotoLocalPage(1, new PdfDestination(PdfDestination.FIT), writer), "目录");
+//        PdfOutline oline2 = new PdfOutline(oline1,
+//                PdfAction.gotoLocalPage(2, new PdfDestination(PdfDestination.FIT), writer), "目录1");
+//        PdfOutline oline3 = new PdfOutline(oline2,
+//                PdfAction.gotoLocalPage(3, new PdfDestination(PdfDestination.FIT), writer), "目录2");
+//        PdfOutline oline4 = new PdfOutline(oline3,
+//                PdfAction.gotoLocalPage(4, new PdfDestination(PdfDestination.FIT), writer), "目录3");
+
     }
 
     public void close(){
