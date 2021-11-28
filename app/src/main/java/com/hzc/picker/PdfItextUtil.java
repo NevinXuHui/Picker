@@ -66,7 +66,7 @@ public class PdfItextUtil {
         PdfAction action;//标识书签点击后的跳转动作，通过它设置跳转的页码
         Log.d(TAG, "onCreate: PdfOutline savePath"+savePath);
 
-        String sTxtPath = savePath+"/目录.txt";
+        String sTxtPath = savePath+"/目录";
         String str;
         int flag = 0;
         BufferedReader bufRead = new BufferedReader(new FileReader(sTxtPath));
@@ -76,7 +76,7 @@ public class PdfItextUtil {
             ss = str.split(",");
             if(flag == 0){
 
-                if(ss[0]==""){
+                if(ss[0].equals("")){
                     flag = 1;
                     sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
                 }else{
@@ -86,8 +86,8 @@ public class PdfItextUtil {
             }
             else if(flag == 1){
 
-                if(ss[0]==""){
-                    sectionOutline2 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
+                if(ss[0].equals("")){
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
                 }else{
                     sectionOutline2 = new PdfOutline(sectionOutline1, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
                 }
