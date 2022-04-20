@@ -8,10 +8,9 @@
 
     <Button
         android:id="@+id/button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        android:textSize="30sp" />
+        android:text="导入pdf文件夹" />
 
     <TextView
         android:id="@+id/tv_result"

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Element;
@@ -22,10 +23,13 @@ import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.codec.PngImage;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.nio.file.ClosedFileSystemException;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,17 +60,17 @@ public class PdfItextUtil {
         Log.d(TAG, "PdfItextUtil: debug4");
 
     }
-
-    public void storeOutline(@NonNull String savePath) throws Exception{
-
+//保存目录
+public int storeOutline(@NonNull String savePath) {
+    try {
         PdfContentByte cb = writer.getDirectContent();
         PdfOutline root = cb.getRootOutline();
         PdfOutline sectionOutline1 = null;
         PdfOutline sectionOutline2 = null;
         PdfAction action;//标识书签点击后的跳转动作，通过它设置跳转的页码
-        Log.d(TAG, "onCreate: PdfOutline savePath"+savePath);
+        Log.d(TAG, "onCreate: PdfOutline savePath" + savePath);
 
-        String sTxtPath = savePath+"/目录";
+        String sTxtPath = savePath + "/目录";
         String str;
         int flag = 0;
         BufferedReader bufRead = new BufferedReader(new FileReader(sTxtPath));
@@ -74,28 +78,35 @@ public class PdfItextUtil {
         while ((str = bufRead.readLine()) != null) {
             String[] ss = null;
             ss = str.split(",");
-            if(flag == 0){
+            if (flag == 0) {
 
-                if(ss[0].equals("")){
+                if (ss[0].equals("")) {
                     flag = 1;
-                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
-                }else{
-                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length - 1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
+                } else {
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length - 1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
                 }
 
-            }
-            else if(flag == 1){
+            } else if (flag == 1) {
 
-                if(ss[0].equals("")){
-                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
-                }else{
-                    sectionOutline2 = new PdfOutline(sectionOutline1, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length-1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
+                if (ss[0].equals("")) {
+                    sectionOutline1 = new PdfOutline(root, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length - 1]), new PdfDestination(PdfDestination.FIT), writer), ss[1]);
+                } else {
+                    sectionOutline2 = new PdfOutline(sectionOutline1, PdfAction.gotoLocalPage(Integer.valueOf(ss[ss.length - 1]), new PdfDestination(PdfDestination.FIT), writer), ss[0]);
                 }
             }
 
 
         }
+    }catch (UnsupportedEncodingException | FileNotFoundException  e){
+        e.printStackTrace();
+        return -1;
+    } catch (IOException e) {
+        e.printStackTrace();
+        return -1;
+    }
 
+    return 0;
 //        PdfOutline oline1 = new PdfOutline(root,
 //                PdfAction.gotoLocalPage(1, new PdfDestination(PdfDestination.FIT), writer), "目录");
 //        PdfOutline oline2 = new PdfOutline(oline1,
@@ -117,15 +128,30 @@ public class PdfItextUtil {
     // imgPath:图片的路径，我使用的是sdcard中图片
     // imgWidth：图片在pdf中所占的宽
     // imgHeight：图片在pdf中所占的高
-    public PdfItextUtil addImageToPdfCenterH(@NonNull String imgPath, float imgWidth, float imgHeight) throws IOException, DocumentException {
+    public int addImageToPdfCenterH(@NonNull String imgPath, float imgWidth, float imgHeight) {
+        try{
+            Image img = Image.getInstance(imgPath);
+            img.setAlignment(Element.ALIGN_CENTER);
+            // img.scaleToFit(imgWidth,imgHeight);
+            //添加到PDF文档
+            document.add(img);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            return -1;
+        } catch (BadElementException e) {
+            e.printStackTrace();
+            return -1;
+        } catch (DocumentException e) {
+            e.printStackTrace();
+            return -1;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        }
         //获取图片
-        Image img = Image.getInstance(imgPath);
-        img.setAlignment(Element.ALIGN_CENTER);
-       // img.scaleToFit(imgWidth,imgHeight);
-        //添加到PDF文档
-        document.add(img);
 
-        return this;
+
+        return 0;
     }
 
     public PdfItextUtil addPngToPdf(InputStream inputStream) throws DocumentException, IOException {

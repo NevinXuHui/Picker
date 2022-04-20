@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,12 +52,15 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private TextView tvResult;
+    private Button button;
     private PdfItextUtil pdfItextUtil;
     private ArrayList<String> mList = new ArrayList<>();
     private static final String TAG = "MainActivity";
 
     private static final int PDF_SAVE_START = 1;// 保存PDF文件的开始意图
     private static final int PDF_SAVE_RESULT = 2;// 保存PDF文件的结果开始意图
+    private static final int PDF_SAVE_ERROR = 3;// 保存PDF文件的结果开始意图
+    private static final int PDF_SAVE_PROGRESS = 4;// 保存PDF文件的结果开始意图
 
     private ProgressDialog myDialog; // 保存进度框
 
@@ -78,6 +82,20 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "保存成功", Toast.LENGTH_SHORT)
                             .show();
                     break;
+                case PDF_SAVE_ERROR:
+                    if (myDialog.isShowing())
+                        myDialog.dismiss();
+                    Log.d(TAG, "handleMessage: PDF_SAVE_ERROR");
+                    Toast.makeText(MainActivity.this, "保存失败", Toast.LENGTH_SHORT)
+                            .show();
+                    break;
+                case PDF_SAVE_PROGRESS:
+                    if (myDialog.isShowing())
+                        myDialog.setMessage(String.format("当前保存进度：%d%%",msg.arg1));
+                    Log.d(TAG, "handleMessage: PDF_SAVE_PROGRESS");
+//                    Toast.makeText(MainActivity.this, "保存失败", Toast.LENGTH_SHORT)
+//                            .show();
+                    break;
             }
             return false;
         }
@@ -87,12 +105,28 @@ public class MainActivity extends AppCompatActivity {
      * 初始化识别进度框
      */
     private void initProgress() {
-        myDialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_LIGHT);
+        myDialog = new ProgressDialog(this, ProgressDialog.STYLE_HORIZONTAL);
         myDialog.setIndeterminateDrawable(getResources().getDrawable(
                 R.drawable.progress_ocr));
-        myDialog.setMessage("正在保存PDF文件...");
+
+        myDialog.setMax(100);
+        myDialog.setProgress(70);
+        myDialog.setMessage("当前保存进度：0%");
         myDialog.setCanceledOnTouchOutside(false);
         myDialog.setCancelable(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Intent intent = getIntent();
+        String data = intent.getStringExtra("extra_data");
+        Log.d(TAG, "onResume: "+data);
+
+//        if(data != null){
+//            toPDF(data);
+//        }
+
     }
 
     @Override
@@ -100,111 +134,78 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         tvResult = findViewById(R.id.tv_result);
-//        findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                FilePicker.build(MainActivity.this, 1)
-////                        .setOpenFile(new File("sdcard/123/"))
-//                        .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
-////                        .setMultiPick(new FilePicker.OnMultiPickListener() {
-////                            @Override
-////                            public void pick(@NonNull List<File> pathList) {
-////                                StringBuilder path = new StringBuilder("多选：\n");
-////                                for (int i = 0; i < pathList.size(); i++) {
-////                                    path.append(pathList.get(i).getAbsolutePath()).append("\n\n");
-////                                }
-////                                tvResult.setText(path.toString());
-////                            }
-////
-////                            @Override
-////                            public void cancel() {
-////                                tvResult.setText("取消选择了");
-////                            }
-////                        })
-//                        .setSinglePick(new FilePicker.OnSinglePickListener() {
-//                            @RequiresApi(api = Build.VERSION_CODES.N)
-//                            @Override
-//                            public void pick(@NonNull File path) throws IOException, DocumentException {
-//                                StringBuilder filestring = new StringBuilder("多选：\n");
-//
-//                                mList = getAllDataFileName(path.getAbsolutePath());
-//                               // Collections.sort(fileList,new FileComparator());
-//                               // fileList.sort(Comparator.naturalOrder());
-//
-//                                for (int i = 0; i < mList.size(); i++) {
-//                                    filestring.append(mList.get(i)).append("\n\n");
-//                                }
-//                                tvResult.setText(filestring.toString());
-//
-//                                toPDF(path);
-////
-////                                try {
-////                                    zcc.createPdf(sourceTextPath, sourceDocPath, desFilename,10);
-////                                    //zcc.getPdf(7, 10, sourceDocPath, desFilename);
-////                                } catch (DocumentException e) {
-////                                    e.printStackTrace();
-////                                } catch (IOException e) {
-////                                    e.printStackTrace();
-////                                }
-//                            }
-//
-//                            @Override
-//                            public void cancel() {
-//                                tvResult.setText("取消选择了");
-//                            }
-//                        })
-//                        .open();
-//            }
-//        });
+        button = findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initProgress();
+                checkNeedPermissions();
+                filePickerExe();
+            }
+        });
+
         initProgress();
         checkNeedPermissions();
 
-        FilePicker.build(MainActivity.this, 1)
-                .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
-                .setSinglePick(new FilePicker.OnSinglePickListener() {
-                                   @RequiresApi(api = Build.VERSION_CODES.N)
-                                   @Override
-                                   public void pick(@NonNull File path) throws IOException, DocumentException {
-                                       StringBuilder filestring = new StringBuilder("多选：\n");
-                                       mList = getAllDataFileName(path.getAbsolutePath());
+        Intent intent = getIntent();
+        String data = intent.getStringExtra("extra_data");
+        if(data != null){
+            Log.d(TAG, "onCreate: 3212321321");
+            toPDF(data);
+        }
+        else{
+            filePickerExe();
+        }
 
-                                       for (int i = 0; i < mList.size(); i++) {
-                                           filestring.append(mList.get(i)).append("\n\n");
-                                       }
-                                       tvResult.setText(filestring.toString());
 
-                                       toPDF(path);
-                                   }
-                                    @Override
-                                    public void cancel() {
-                        tvResult.setText("取消选择了");
-                    }
-                                   })
-                                    .open();;
+
+        Log.d(TAG, "onCreate: "+data);
+
+
 
     }
 
-    //                        .setMultiPick(new FilePicker.OnMultiPickListener() {
-//                            @Override
-//                            public void pick(@NonNull List<File> pathList) {
-//                                StringBuilder path = new StringBuilder("多选：\n");
-//                                for (int i = 0; i < pathList.size(); i++) {
-//                                    path.append(pathList.get(i).getAbsolutePath()).append("\n\n");
-//                                }
-//                                tvResult.setText(path.toString());
-//                            }
-//
-//                            @Override
-//                            public void cancel() {
-//                                tvResult.setText("取消选择了");
-//                            }
-//                        })
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+//        Intent intent = getIntent();
+//        String data2 = intent.getStringExtra("extra_data");
+//        if(data2 != null){
+//            toPDF(data2);
+//            return;
+//        }
+
         FilePicker.onActivityResult(this, requestCode, resultCode, data);
     }
 
+
+
+
+    private void  filePickerExe(){
+        FilePicker.build(MainActivity.this, 1)
+                .setPickFileType(FilePickerUiParams.PickType.FILE_OR_FOLDER)
+                .setSinglePick(new FilePicker.OnSinglePickListener() {
+                    @RequiresApi(api = Build.VERSION_CODES.N)
+                    @Override
+                    public void pick(@NonNull File path) throws IOException, DocumentException {
+                        StringBuilder filestring = new StringBuilder("多选：\n");
+                        mList = getAllDataFileName(path.getAbsolutePath());
+
+                        for (int i = 0; i < mList.size(); i++) {
+                            filestring.append(mList.get(i)).append("\n\n");
+                        }
+                        tvResult.setText(filestring.toString());
+
+                        toPDF(path);
+                    }
+                    @Override
+                    public void cancel() {
+                        tvResult.setText("取消选择了");
+                    }
+                })
+                .open();;
+    }
 
 
     public ArrayList<String> getAllDataFileName(String collectionPath){
@@ -232,26 +233,6 @@ public class MainActivity extends AppCompatActivity {
                 fileList.add(fileName);
             }
         }
-
-//        File[] tempList = files.listFiles();
-       // Collections.sort(tempList, new FileComparator());
-
-//        for (int i = 0; i < tempList.length; i++) {
-//            if (tempList[i].isFile()) {
-//                System.out.println("文件：" + tempList[i].getName());
-//                // tempList[i].toString();// 路径
-//                // tempList[i].getName();// 文件名
-//                // 文件名
-//                String fileName = collectionPath+"/"+tempList[i].getName();
-//                if (fileName.endsWith("jpg")){
-//                    // 文件大小
-//                    // String fileSize = FileSizeUtil.getAutoFileOrFilesSize(tempList[i].toString());
-//                    fileList.add(fileName);
-//                }
-//
-//            }
-//        }
-
         return fileList;
     }
 
@@ -262,11 +243,6 @@ public class MainActivity extends AppCompatActivity {
         if (!file.exists())
             file.mkdirs();
         Log.d(TAG, "toPDF: debug2");
-//        long time = System.currentTimeMillis();
-//        Date date = new Date(time);
-//        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
-//        final String pdf_address = PdfUtils.ADDRESS + File.separator + "PDF_"
-//                + sdf.format(date) + ".pdf";
         final String pdf_address =PDFpath.getPath()+".pdf";
 
         Log.d(TAG, "toPDF: debug3");
@@ -288,7 +264,16 @@ public class MainActivity extends AppCompatActivity {
                             Log.d(TAG, "run: mList"+mList.get(i).toString());
                             Bitmap bitmap= BitmapFactory.decodeStream(new FileInputStream(mList.get(i)));
                             //这里当然可以输入文字和标题之类的。我们项目里面是只有图片所以。只需要.addImageToPdfCenterH();当然这里的图片在pdf中的放置可以通过设置的。看工具类
-                            pdfItextUtil.addImageToPdfCenterH(mList.get(i), PageSize.A4.getWidth(), PageSize.A4.getHeight());
+                            int ret = pdfItextUtil.addImageToPdfCenterH(mList.get(i), PageSize.A4.getWidth(), PageSize.A4.getHeight());
+                            if(ret != 0){
+                                Toast.makeText(MainActivity.this, "图片保存异常，请重试", Toast.LENGTH_SHORT).show();
+                            }
+                            Message msg = new Message();
+                            msg.what = PDF_SAVE_PROGRESS;
+                            msg.arg1 = 100*i/mList.size();
+                            handler.sendMessage(msg);
+
+//                            handler.sendEmptyMessage(PDF_SAVE_ERROR);
                             // pdfItextUtil.addTitleToPdf("我是标题"+i).addImageToPdfCenterH(mList.get(i), PageSize.A4.getWidth() - 20, PageSize.A4.getWidth() /bitmap.getWidth() * bitmap.getHeight()).addTextToPdf("这是pdf文件的内容，我这里进行了集成这个Demo，希望可以帮助项目中遇到pdf以及文字合成，我尽自己所能,希望编程路上可以帮助到出来匝道的萌新们");
                         }
 
@@ -297,27 +282,89 @@ public class MainActivity extends AppCompatActivity {
                     }
 
 
-                    /* pdfItextUtil = new PdfItextUtil(pdf_address)
-                            .addTitleToPdf("哈哈哈哈哈哈")
-                            .addTextToPdf("小时一宗大都但是你下u狗的两个垃圾啊的佛教是浪费家里睡大觉分类数据分类将军澳隧道连接法兰圣诞节佛山警方拉数据")
-                            .addImageToPdfCenterH(Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "MyPdf" + File.separator + "aa.jpg", PageSize.A4.getWidth()-20,PageSize.A4.getWidth()/bitmap1.getWidth()*bitmap1.getHeight())
-                            .addTextToPdf("真滴都是无语打来电话了发几份简历垃圾死了就大了就")
-                            .addImageToPdfCenterH(Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "MyPdf" + File.separator + "bb.jpg",  PageSize.A4.getWidth()-20,PageSize.A4.getWidth()/bitmap2.getWidth()*bitmap2.getHeight())
-                            .addTextToPdf("笑死宝宝补偿钱");*/
+                    int ret = pdfItextUtil.storeOutline(PDFpath.getPath());
 
-                    pdfItextUtil.storeOutline(PDFpath.getPath());
+                    if(ret != 0){
+                        Toast.makeText(MainActivity.this, "目录保存异常，请重试", Toast.LENGTH_SHORT).show();
+                    }
 
                     pdfItextUtil.close();
 
-                    handler.sendEmptyMessage(PDF_SAVE_RESULT);
+
 
                 } catch (Exception e) {
+                    handler.sendEmptyMessage(PDF_SAVE_ERROR);
                     e.printStackTrace();
                 } finally {
                     if (pdfItextUtil != null) {
                         pdfItextUtil.close();
                     }
+                    handler.sendEmptyMessage(PDF_SAVE_RESULT);
                 }
+            }
+        }).start();
+
+        return pdf_address;
+    }
+
+    public String toPDF(String PDFpath) {
+        Log.d(TAG, "toPDF: PDFpath"+PDFpath);
+        Log.d(TAG, "toPDF: PDFpath.getName()"+PDFpath);
+        File file = new File(PdfUtils.ADDRESS);
+        if (!file.exists())
+            file.mkdirs();
+        Log.d(TAG, "toPDF: debug2");
+
+
+        StringBuilder filestring = new StringBuilder("多选：\n");
+        mList = getAllDataFileName(PDFpath);
+
+        for (int i = 0; i < mList.size(); i++) {
+            filestring.append(mList.get(i)).append("\n\n");
+        }
+        tvResult.setText(filestring.toString());
+
+
+        String PDFpath1 = PDFpath.substring(0,PDFpath.length()-1);
+        final String pdf_address =PDFpath1+".pdf";
+
+        Log.d(TAG, "toPDF: debug3");
+        handler.sendEmptyMessage(PDF_SAVE_START);
+        Log.d(TAG, "toPDF: debug4");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                    Log.d(TAG, "toPDF: debug5");
+                    Log.d(TAG, "run: pdf_address：" + pdf_address);
+                try {
+                    pdfItextUtil = new PdfItextUtil(pdf_address);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                //判断是否有图片没有土司提示选择图片
+                    //如果有进行合成
+                    if (mList.size() > 0) {
+                        Log.d(TAG, "run: mList.size：" + mList.size());
+
+                        for (int i = 0; i < mList.size(); i++) {
+                            Log.d(TAG, "run: mList" + mList.get(i).toString());
+                            try {
+                                Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(mList.get(i)));
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                            //这里当然可以输入文字和标题之类的。我们项目里面是只有图片所以。只需要.addImageToPdfCenterH();当然这里的图片在pdf中的放置可以通过设置的。看工具类
+                            int ret = pdfItextUtil.addImageToPdfCenterH(mList.get(i), PageSize.A4.getWidth(), PageSize.A4.getHeight());
+                            Message msg = new Message();
+                            msg.what = PDF_SAVE_PROGRESS;
+                            msg.arg1 = 100 * i / mList.size();
+                            handler.sendMessage(msg);
+                        }
+
+                        pdfItextUtil.storeOutline(PDFpath);
+                        pdfItextUtil.close();
+                        handler.sendEmptyMessage(PDF_SAVE_RESULT);
+                    }
             }
         }).start();
 
